@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Фентъзи Магически Гласове 🪄</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #0a0a0a, #1b1b2f);
+      color: #f0e6f6;
+      font-family: 'Trebuchet MS', sans-serif;
+      text-align: center;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    h1 {
+      color: #d9a6ff;
+      text-shadow: 0 0 10px #b88fff, 0 0 20px #b88fff;
+      margin-top: 40px;
+    }
+
+    button, select {
+      font-size: 18px;
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #4b3d67;
+      color: #f0e6f6;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+
+    button:hover, select:hover {
+      background: #6a53a3;
+      transform: scale(1.05);
+    }
+
+    audio {
+      margin-top: 20px;
+      outline: none;
+      width: 80%;
+      border-radius: 8px;
+      background: #2e1e4d;
+    }
+
+    .magic-label {
+      font-size: 20px;
+      margin-top: 20px;
+      color: #d9a6ff;
+      text-shadow: 0 0 5px #b88fff;
+    }
+
+    .voice-option {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .voice-option img {
+      width: 25px;
+      height: 25px;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="magicCanvas"></canvas>
+
+  <h1>Фентъзи Магически Гласове 🪄</h1>
+
+  <button id="startBtn">Запиши глас</button>
+  <button id="stopBtn" disabled>Спри запис</button>
+
+  <p class="magic-label">Избери магически глас:</p>
+  <select id="voiceSelect">
+    <option value="wizard">🧙‍♂️ Учител Магьосник</option>
+    <option value="ghost">👻 Дух на замъка</option>
+    <option value="dark">🖤 Тъмна магия</option>
+    <option value="fairy">🧚 Фея/светъл глас</option>
+    <option value="whisper">💨 Шептящ глас</option>
+    <option value="chorus">🎵 Хорово озвучаване</option>
+    <option value="vibrato">✨ Магическо трептене</option>
+  </select>
+
+  <h3>Твоят магически глас:</h3>
+  <audio id="player" controls></audio>
+
+<script>
+let mediaRecorder;
+let audioChunks = [];
+
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const player = document.getElementById("player");
+const voiceSelect = document.getElementById("voiceSelect");
+
+// Запис на глас
+startBtn.onclick = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaRecorder = new MediaRecorder(stream);
+  audioChunks = [];
+
+  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+  mediaRecorder.onstop = processAudio;
+
+  mediaRecorder.start();
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+};
+
+stopBtn.onclick = () => {
+  mediaRecorder.stop();
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+};
+
+// Магически ефекти на гласа
+function processAudio() {
+  const blob = new Blob(audioChunks, { type: "audio/wav" });
+  const url = URL.createObjectURL(blob);
+
+  const audioContext = new AudioContext();
+  const source = audioContext.createBufferSource();
+
+  fetch(url)
+    .then(response => response.arrayBuffer())
+    .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+    .then(audioBuffer => {
+      source.buffer = audioBuffer;
+      const selected = voiceSelect.value;
+
+      let pitch = 1;
+      let delayTime = 0;
+      let decay = 0;
+
+      switch(selected) {
+        case "wizard": pitch = 1.2; delayTime = 0.3; decay = 0.4; break;
+        case "ghost": pitch = 0.9; delayTime = 0.5; decay = 0.5; break;
+        case "dark": pitch = 0.7; delayTime = 0.4; decay = 0.6; break;
+        case "fairy": pitch = 1.5; delayTime = 0.2; decay = 0.3; break;
+        case "whisper": pitch = 1.0; delayTime = 0.15; decay = 0.5; break;
+        case "chorus": pitch = 1.0; delayTime = 0.05; decay = 0.4; break;
+        case "vibrato": pitch = 1.0; delayTime = 0.0; decay = 0.0; break;
+      }
+
+      source.playbackRate.value = pitch;
+
+      const delay = audioContext.createDelay();
+      delay.delayTime.value = delayTime;
+      const feedback = audioContext.createGain();
+      feedback.gain.value = decay;
+      delay.connect(feedback);
+      feedback.connect(delay);
+
+      let node = source;
+
+      if(selected === "chorus") {
+        const source2 = audioContext.createBufferSource();
+        source2.buffer = audioBuffer;
+        source2.playbackRate.value = pitch;
+        const delay2 = audioContext.createDelay();
+        delay2.delayTime.value = 0.03;
+        source2.connect(delay2);
+        delay2.connect(audioContext.destination);
+        source2.start(0);
+      } else if(selected === "vibrato") {
+        const gainNode = audioContext.createGain();
+        const lfo = audioContext.createOscillator();
+        lfo.frequency.value = 5;
+        const lfoGain = audioContext.createGain();
+        lfoGain.gain.value = 0.02;
+        lfo.connect(lfoGain);
+        lfoGain.connect(source.playbackRate);
+        lfo.start();
+        node.connect(gainNode).connect(audioContext.destination);
+      }
+
+      node.connect(delay);
+      delay.connect(audioContext.destination);
+      node.connect(audioContext.destination);
+
+      source.start(0);
+
+      player.src = url;
+    });
+}
+
+// ✨ Магически частици на фона
+const canvas = document.getElementById('magicCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const particles = [];
+for(let i=0; i<100; i++){
+  particles.push({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height,
+    r: Math.random()*2+1,
+    dx: (Math.random()-0.5)*0.5,
+    dy: (Math.random()-0.5)*0.5,
+    color: `rgba(200,180,255,${Math.random()})`
+  });
+}
+
+function animate() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let p of particles){
+    p.x += p.dx;
+    p.y += p.dy;
+    if(p.x<0) p.x=canvas.width;
+    if(p.x>canvas.width) p.x=0;
+    if(p.y<0) p.y=canvas.height;
+    if(p.y>canvas.height) p.y=0;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+  }
+  requestAnimationFrame(animate);
+}
+animate();
+
+window.addEventListener('resize', ()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>
+
